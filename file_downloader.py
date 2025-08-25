@@ -15,17 +15,6 @@ class FileDownloader:
         self.window.title("文件批量下载器")
         self.window.geometry("600x400")
 
-        # Setup global logger to append to a single file
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler("download_log.txt"),
-                logging.StreamHandler()
-            ]
-        )
-        
-        # 创建界面元素
         self.create_widgets()
         
     def create_widgets(self):
@@ -61,6 +50,23 @@ class FileDownloader:
         # 下载按钮
         self.download_btn = ttk.Button(self.window, text="开始下载", command=self.start_download)
         self.download_btn.pack(pady=10)
+
+    def setup_logger(self, save_path):
+        log_path = Path(save_path) / "download_log.txt"
+        
+        # Remove all handlers associated with the root logger.
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+            
+        # Basic config sets up a StreamHandler and specifies the format.
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_path),
+                logging.StreamHandler()
+            ]
+        )
 
         
     def browse_path(self):
@@ -145,6 +151,7 @@ class FileDownloader:
         self.download_btn["state"] = "disabled"
         
         def download_thread():
+            self.setup_logger(save_path)
             start_time = time.time()
             total = len(urls)
             success = 0
