@@ -56,12 +56,14 @@ class FileDownloader:
             self.path_var.set(path)
             
     def download_file(self, url, save_path):
+        filename = ""  # Initialize filename
         try:
             # 添加请求头，模拟浏览器行为
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
-            response = requests.get(url, stream=True, headers=headers, allow_redirects=True)
+            # By setting proxies to None, we can avoid proxy-related issues.
+            response = requests.get(url, stream=True, headers=headers, allow_redirects=True, proxies=None)
             response.raise_for_status()
             
             # 优先从 URL 的查询参数中获取文件名
@@ -80,7 +82,7 @@ class FileDownloader:
                     filename = unquote(os.path.basename(url_path))
             
             # 确保文件名有效
-            filename = "".join(c for c in filename if c.isprintable() and c not in r'<>:"/\|?*')
+            filename = "".join(c for c in filename if c.isprintable() and c not in r'<>:\"/\\|?*')
             
             # 处理文件名重复
             file_path = Path(save_path) / filename
@@ -107,7 +109,9 @@ class FileDownloader:
                         
             return True
         except Exception as e:
-            self.progress_var.set(f"下载失败: {filename} - {str(e)}")
+            # If the filename has not been assigned, use the URL for the error message
+            error_filename = filename if filename else url
+            self.progress_var.set(f"下载失败: {error_filename} - {str(e)}")
             return False
             
     def start_download(self):
