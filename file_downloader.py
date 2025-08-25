@@ -7,6 +7,7 @@ from urllib.parse import unquote
 import os
 import time
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import parse_qs, urlparse
 
 class FileDownloader:
@@ -74,7 +75,7 @@ class FileDownloader:
         if path:
             self.path_var.set(path)
             
-    def download_file(self, url, save_path):
+    def download_file(self, session, url, save_path, retries=3, delay=1):
         filename = ""  # Initialize filename
         try:
             # 添加请求头，模拟浏览器行为
@@ -82,7 +83,7 @@ class FileDownloader:
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
             # By setting proxies to None, we can avoid proxy-related issues.
-            response = requests.get(url, stream=True, headers=headers, allow_redirects=True, proxies=None)
+            response = session.get(url, stream=True, headers=headers, allow_redirects=True, proxies=None)
             response.raise_for_status()
             
             # 优先从 URL 的查询参数中获取文件名
@@ -131,8 +132,13 @@ class FileDownloader:
         except Exception as e:
             error_filename = filename if filename else url
             logging.error(f"Failed to download {error_filename}: {e}")
-            self.progress_var.set(f"下载失败: {error_filename} - {str(e)}")
-            return False
+            if retries > 0:
+                logging.info(f"Retrying... ({retries} attempts left)")
+                time.sleep(delay)
+                return self.download_file(session, url, save_path, retries - 1, delay * 2)  # Exponential backoff
+            else:
+                self.progress_var.set(f"下载失败: {error_filename} - {str(e)}")
+                return False
             
     def start_download(self):
         save_path = self.path_var.get()
@@ -157,12 +163,14 @@ class FileDownloader:
             success = 0
             failures = 0
 
-            for i, url in enumerate(urls, 1):
-                self.progress_var.set(f"正在处理第 {i}/{total} 个文件")
-                if self.download_file(url, save_path):
-                    success += 1
-                else:
-                    failures += 1
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                with requests.Session() as session:
+                    futures = [executor.submit(self.download_file, session, url, save_path) for url in urls]
+                    for future in futures:
+                        if future.result():
+                            success += 1
+                        else:
+                            failures += 1
 
             end_time = time.time()
             total_duration = end_time - start_time
