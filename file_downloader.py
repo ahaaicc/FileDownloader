@@ -5,6 +5,8 @@ from pathlib import Path
 import threading
 from urllib.parse import unquote
 import os
+import time
+import logging
 from urllib.parse import parse_qs, urlparse
 
 class FileDownloader:
@@ -12,6 +14,16 @@ class FileDownloader:
         self.window = tk.Tk()
         self.window.title("文件批量下载器")
         self.window.geometry("600x400")
+
+        # Setup global logger to append to a single file
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler("download_log.txt"),
+                logging.StreamHandler()
+            ]
+        )
         
         # 创建界面元素
         self.create_widgets()
@@ -49,6 +61,7 @@ class FileDownloader:
         # 下载按钮
         self.download_btn = ttk.Button(self.window, text="开始下载", command=self.start_download)
         self.download_btn.pack(pady=10)
+
         
     def browse_path(self):
         path = filedialog.askdirectory()
@@ -107,10 +120,11 @@ class FileDownloader:
                         self.progress_var.set(f"正在下载: {filename} ({progress:.1f}%)")
                         self.window.update_idletasks()
                         
+            logging.info(f"Successfully downloaded {filename}")
             return True
         except Exception as e:
-            # If the filename has not been assigned, use the URL for the error message
             error_filename = filename if filename else url
+            logging.error(f"Failed to download {error_filename}: {e}")
             self.progress_var.set(f"下载失败: {error_filename} - {str(e)}")
             return False
             
@@ -131,15 +145,27 @@ class FileDownloader:
         self.download_btn["state"] = "disabled"
         
         def download_thread():
+            start_time = time.time()
             total = len(urls)
             success = 0
-            
+            failures = 0
+
             for i, url in enumerate(urls, 1):
                 self.progress_var.set(f"正在处理第 {i}/{total} 个文件")
                 if self.download_file(url, save_path):
                     success += 1
-                    
-            self.progress_var.set(f"下载完成！成功: {success}/{total}")
+                else:
+                    failures += 1
+
+            end_time = time.time()
+            total_duration = end_time - start_time
+
+            logging.info(f"Download complete!")
+            logging.info(f"Successful downloads: {success}/{total}")
+            logging.info(f"Failed downloads: {failures}")
+            logging.info(f"Total download time: {total_duration:.2f} seconds")
+
+            self.progress_var.set(f"下载完成！成功: {success}/{total}, 失败: {failures}")
             self.download_btn["state"] = "normal"
             self.progress_bar["value"] = 100
             
