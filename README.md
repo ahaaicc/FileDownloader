@@ -1,7 +1,5 @@
 # FileDownloader
 
-[**Click here to download the app-v0.1 !!!**](https://github.com/chaozhoo/FileDownloader/releases/download/v0.1/file_downloader.exe)
-
 ### Try the following links:
 ```
 https://ambientcg.com/get?file=Gravel041_1K-JPG.zip
