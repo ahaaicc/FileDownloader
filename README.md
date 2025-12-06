@@ -35,3 +35,26 @@ pyinstaller --onefile --console file_downloader.py
 - **UPX 使用条件**：
   - 若已将 UPX 添加到系统 PATH（如 `C:\\upx`），无需额外参数
   - 若未添加 PATH，请使用 `--upx-dir="C:\\upx"` 指定路径
+
+## 打包为 macOS 独立运行应用（.app）
+
+```bash
+# 生成 macOS 独立应用（与 EXE 使用效果一致，双击运行；不弹出终端窗口）
+pyinstaller --onefile --windowed --name "FileDownloader" file_downloader.py
+```
+
+- 输出文件位置：`dist/FileDownloader.app`
+- 需要查看运行日志/标准输出时，有两种方式：
+  1) 直接从终端运行 .app 内部可执行文件：
+     ```bash
+     ./dist/FileDownloader.app/Contents/MacOS/FileDownloader
+     ```
+  2) 打包为控制台程序（不生成 .app，需在终端运行）：
+     ```bash
+     pyinstaller --onefile --console file_downloader.py
+     ```
+- 若你已维护 spec 文件并希望使用 spec 打包：
+  - 生成 .app：确保 `file_downloader.spec` 中 `console=False`（或 `EXE(..., console=False)`），再执行：
+    ```bash
+    pyinstaller file_downloader.spec
+    ```
