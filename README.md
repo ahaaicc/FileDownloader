@@ -24,6 +24,23 @@ https://ambientcg.com/get?file=Gravel033_1K-JPG.zip
 2. 结合 [八爪鱼采集器](https://www.bazhuayu.com/) 一起使用可以极大提高效率
 3. 复制采集好的下载链接粘贴到输入框，点击下载，等待下载完成
 
+## 依赖安装
+
+### Windows
+```bash
+pip install -r requirements.txt
+```
+
+### macOS
+```bash
+pip install -r requirements-macos.txt
+```
+
+> **注意**：
+> - Windows 和 macOS 使用不同的依赖文件，因为某些依赖是平台特定的
+> - macOS 版本支持 Python 3.8+ （包括最新的 3.14）
+> - 如果使用 Python 3.14+，会自动安装兼容版本的 PyInstaller (6.15+)
+
 ## 打包为单文件 EXE
 
 ```bash
@@ -38,28 +55,40 @@ pyinstaller --onefile --console file_downloader.py
 
 ## 打包为 macOS 独立运行应用（.app）
 
-```bash
-# 生成 macOS 独立应用（与 EXE 使用效果一致，双击运行；不弹出终端窗口）
-pyinstaller --onefile --windowed --name "FileDownloader" file_downloader.py
-```
+### 方法一：使用自动化脚本（推荐）
 
 ```bash
-# 生成 macOS 独立应用（与 EXE 使用效果一致，双击运行；弹出终端窗口）
-pyinstaller --onefile --name "FileDownloader" file_downloader.py
+# 赋予脚本执行权限
+chmod +x build-macos.sh
+
+# 运行脚本自动完成打包
+./build-macos.sh
 ```
 
-- 输出文件位置：`dist/FileDownloader.app`
-- 需要查看运行日志/标准输出时，有两种方式：
-  1) 直接从终端运行 .app 内部可执行文件：
+### 方法二：手动打包
+
+```bash
+# 1. 安装 macOS 专用依赖
+pip install -r requirements-macos.txt
+
+# 2. 打包为 .app（推荐，不弹出终端窗口）
+pyinstaller --windowed --name "FileDownloader" file_downloader.py
+
+# 或打包为控制台应用（弹出终端窗口，便于调试）
+pyinstaller --console --name "FileDownloader" file_downloader.py
+```
+
+> **注意**：macOS 不推荐使用 `--onefile` 参数，因为 .app bundle 本身就是独立应用包
+
+- **输出位置**：`dist/FileDownloader.app`
+- **运行方式**：
+  1. 双击运行：直接双击 `dist/FileDownloader.app`
+  2. 终端运行（可查看日志）：
      ```bash
      ./dist/FileDownloader.app/Contents/MacOS/FileDownloader
      ```
-  2) 打包为控制台程序（不生成 .app，需在终端运行）：
-     ```bash
-     pyinstaller --onefile --console file_downloader.py
-     ```
-- 若你已维护 spec 文件并希望使用 spec 打包：
-  - 生成 .app：确保 `file_downloader.spec` 中 `console=False`（或 `EXE(..., console=False)`），再执行：
-    ```bash
-    pyinstaller file_downloader.spec
-    ```
+- **应用大小**：约 30-40 MB（包含所有依赖）
+- **使用 spec 文件打包**：
+  ```bash
+  pyinstaller FileDownloader.spec
+  ```

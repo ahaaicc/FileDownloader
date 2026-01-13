@@ -1,0 +1,7 @@
+# macOS 专用依赖文件
+# 使用方法: pip install -r requirements-macos.txt
+# 支持 Python 3.8+（包括最新的 3.14）
+
+requests>=2.32.3
+pyinstaller>=6.15.0
+pyinstaller-hooks-contrib>=2024.10
