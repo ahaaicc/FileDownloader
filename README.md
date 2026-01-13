@@ -43,6 +43,11 @@ pyinstaller --onefile --console file_downloader.py
 pyinstaller --onefile --windowed --name "FileDownloader" file_downloader.py
 ```
 
+```bash
+# 生成 macOS 独立应用（与 EXE 使用效果一致，双击运行；弹出终端窗口）
+pyinstaller --onefile --name "FileDownloader" file_downloader.py
+```
+
 - 输出文件位置：`dist/FileDownloader.app`
 - 需要查看运行日志/标准输出时，有两种方式：
   1) 直接从终端运行 .app 内部可执行文件：
