@@ -55,40 +55,82 @@ pyinstaller --onefile --console file_downloader.py
 
 ## 打包为 macOS 独立运行应用（.app）
 
-### 方法一：使用自动化脚本（推荐）
+### 方法一：标准打包（推荐）
+
+最简单的方式，适合大多数用户：
 
 ```bash
-# 赋予脚本执行权限
-chmod +x build-macos.sh
+# GUI 模式（无终端窗口）
+./build-macos.sh gui
 
-# 运行脚本自动完成打包
-./build-macos.sh
+# 控制台模式（有终端窗口，便于调试）
+./build-macos.sh console
+
+# 清理构建文件
+./build-macos.sh clean
 ```
 
-### 方法二：手动打包
+### 方法二：高级打包（最佳实践）
+
+使用 spec 文件进行精细控制，获得更好的优化：
 
 ```bash
-# 1. 安装 macOS 专用依赖
-pip install -r requirements-macos.txt
-
-# 2. 打包为 .app（推荐，不弹出终端窗口）
-pyinstaller --windowed --name "FileDownloader" file_downloader.py
-
-# 或打包为控制台应用（弹出终端窗口，便于调试）
-pyinstaller --console --name "FileDownloader" file_downloader.py
+# 使用优化的 spec 文件打包
+./build-macos-advanced.sh
 ```
 
-> **注意**：macOS 不推荐使用 `--onefile` 参数，因为 .app bundle 本身就是独立应用包
+**高级打包的优势**：
+- ✅ Universal Binary（同时支持 Intel 和 Apple Silicon）
+- ✅ 排除不必要的模块，体积更小
+- ✅ 更好的元数据和系统集成
+- ✅ 支持暗黑模式
+- ✅ 可自定义图标和版本信息
 
-- **输出位置**：`dist/FileDownloader.app`
-- **运行方式**：
-  1. 双击运行：直接双击 `dist/FileDownloader.app`
-  2. 终端运行（可查看日志）：
-     ```bash
-     ./dist/FileDownloader.app/Contents/MacOS/FileDownloader
-     ```
-- **应用大小**：约 30-40 MB（包含所有依赖）
-- **使用 spec 文件打包**：
-  ```bash
-  pyinstaller FileDownloader.spec
-  ```
+### 方法三：手动打包
+
+如果需要完全自定义：
+
+```bash
+# 1. 安装依赖
+pip3 install -r requirements-macos.txt
+
+# 2a. 使用命令行参数（快速）
+pyinstaller --name "FileDownloader" --noconfirm file_downloader.py
+
+# 2b. 使用 spec 文件（推荐）
+pyinstaller --noconfirm FileDownloader-macos.spec
+```
+
+### 打包输出
+
+- **位置**：`dist/FileDownloader.app`
+- **大小**：约 30-40 MB
+- **架构**：Universal (Intel + Apple Silicon)
+
+### 运行方式
+
+```bash
+# 方式1：双击运行
+open dist/FileDownloader.app
+
+# 方式2：终端运行（查看日志）
+./dist/FileDownloader.app/Contents/MacOS/FileDownloader
+
+# 方式3：安装到系统
+cp -r dist/FileDownloader.app /Applications/
+```
+
+### macOS 最佳实践说明
+
+✅ **推荐**：
+- 不使用 `--onefile`（.app bundle 本身就是独立包）
+- 不使用 `--windowed`（用默认的 GUI 模式）
+- 使用 `--noconfirm` 自动覆盖
+- 使用 spec 文件进行精细控制
+- 不使用 UPX 压缩（macOS 不推荐）
+- 支持 Universal Binary
+
+❌ **避免**：
+- `--onefile` + GUI 模式（会导致启动慢、体积大）
+- `--upx`（可能导致 macOS Gatekeeper 问题）
+- `--strip`（会移除必要的调试信息）

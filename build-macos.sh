@@ -1,69 +1,112 @@
 #!/bin/bash
-# macOS 打包脚本
+# macOS 打包脚本 - 遵循 PyInstaller 最佳实践
+# 使用优化的 spec 文件进行打包
+
+set -e  # 遇到错误立即退出
 
 echo "=== FileDownloader macOS 打包脚本 ==="
 echo ""
 
-# 检查 Python 环境
+# 检查 Python
 if ! command -v python3 &> /dev/null; then
-    echo "❌ 错误: 未找到 python3"
+    echo "❌ 未找到 python3"
     exit 1
 fi
 
-echo "✓ Python 版本: $(python3 --version)"
-echo ""
+echo "✓ Python: $(python3 --version)"
 
-# 清理旧的构建文件
-echo "📦 清理旧的构建文件..."
-rm -rf build dist *.spec
+# 参数处理
+MODE=${1:-gui}
 
-# 安装依赖
-echo ""
-echo "📥 安装依赖..."
-pip3 install --user -r requirements-macos.txt || {
-    echo "⚠️  使用 --user 安装失败，尝试全局安装..."
-    pip3 install -r requirements-macos.txt
-}
+if [[ "$MODE" != "gui" && "$MODE" != "console" && "$MODE" != "clean" ]]; then
+    echo ""
+    echo "用法: $0 [gui|console|clean]"
+    echo "  gui     - GUI 应用（默认）"
+    echo "  console - 控制台应用（调试）"
+    echo "  clean   - 清理构建文件"
+    exit 1
+fi
 
-# 打包应用
-echo ""
-echo "🔨 开始打包..."
+# 清理模式
+if [ "$MODE" == "clean" ]; then
+    echo ""
+    echo "🧹 清理构建文件..."
+    rm -rf build dist FileDownloader.spec __pycache__
+    echo "✅ 清理完成"
+    exit 0
+fi
 
-# 尝试找到 pyinstaller 命令
+# 查找 pyinstaller
 PYINSTALLER_CMD=""
 if command -v pyinstaller &> /dev/null; then
     PYINSTALLER_CMD="pyinstaller"
-elif [ -x "$HOME/Library/Python/3.14/bin/pyinstaller" ]; then
-    PYINSTALLER_CMD="$HOME/Library/Python/3.14/bin/pyinstaller"
-elif [ -x "$HOME/Library/Python/3.13/bin/pyinstaller" ]; then
-    PYINSTALLER_CMD="$HOME/Library/Python/3.13/bin/pyinstaller"
-elif [ -x "$HOME/Library/Python/3.12/bin/pyinstaller" ]; then
-    PYINSTALLER_CMD="$HOME/Library/Python/3.12/bin/pyinstaller"
 else
-    echo "❌ 找不到 pyinstaller 命令"
-    echo "请运行: pip3 install pyinstaller"
+    for version in 3.14 3.13 3.12 3.11 3.10; do
+        if [ -x "$HOME/Library/Python/$version/bin/pyinstaller" ]; then
+            PYINSTALLER_CMD="$HOME/Library/Python/$version/bin/pyinstaller"
+            break
+        fi
+    done
+fi
+
+if [ -z "$PYINSTALLER_CMD" ]; then
+    echo "❌ 找不到 pyinstaller"
+    echo "请运行: pip3 install --user pyinstaller"
     exit 1
 fi
 
-echo "使用: $PYINSTALLER_CMD"
+echo "✓ PyInstaller: $PYINSTALLER_CMD"
+echo ""
 
-# 注意：macOS 上不使用 --onefile，因为 .app bundle 本身就是独立包
-$PYINSTALLER_CMD --windowed \
-                 --name "FileDownloader" \
-                 --clean \
-                 file_downloader.py
+# 检查依赖
+echo "📥 检查依赖..."
+pip3 show requests pyinstaller &> /dev/null || pip3 install --user -r requirements-macos.txt
+echo ""
 
-# 检查打包结果
-if [ -f "dist/FileDownloader.app/Contents/MacOS/FileDownloader" ]; then
-    echo ""
-    echo "✅ 打包成功！"
-    echo "📍 应用位置: dist/FileDownloader.app"
-    echo ""
-    echo "使用方法："
-    echo "  1. 双击运行: 直接双击 dist/FileDownloader.app"
-    echo "  2. 终端运行: ./dist/FileDownloader.app/Contents/MacOS/FileDownloader"
+# 清理旧文件
+rm -rf dist
+
+# 打包
+echo "🔨 开始打包 (模式: $MODE)..."
+echo ""
+
+if [ "$MODE" == "gui" ]; then
+    # 使用优化的 spec 文件
+    $PYINSTALLER_CMD --noconfirm FileDownloader-macos.spec
+    
+    # 检查结果
+    if [ -d "dist/FileDownloader.app" ]; then
+        APP_SIZE=$(du -sh dist/FileDownloader.app | awk '{print $1}')
+        echo ""
+        echo "✅ 打包成功！"
+        echo ""
+        echo "📦 应用信息:"
+        echo "  位置: dist/FileDownloader.app"
+        echo "  大小: $APP_SIZE"
+        echo "  架构: Universal (Intel + Apple Silicon)"
+        echo ""
+        echo "🚀 使用方法:"
+        echo "  1. 双击: open dist/FileDownloader.app"
+        echo "  2. 终端: ./dist/FileDownloader.app/Contents/MacOS/FileDownloader"
+        echo "  3. 安装: cp -r dist/FileDownloader.app /Applications/"
+        echo ""
+        echo "💡 提示: 首次运行需在系统设置中允许"
+    else
+        echo "❌ 打包失败"
+        exit 1
+    fi
 else
-    echo ""
-    echo "❌ 打包失败，请检查错误信息"
-    exit 1
+    # 控制台模式
+    $PYINSTALLER_CMD --noconfirm --console --onedir --name "FileDownloader" file_downloader.py
+    
+    if [ -d "dist/FileDownloader" ]; then
+        echo ""
+        echo "✅ 打包成功！"
+        echo ""
+        echo "📦 控制台应用: dist/FileDownloader/"
+        echo "🚀 运行: ./dist/FileDownloader/FileDownloader"
+    else
+        echo "❌ 打包失败"
+        exit 1
+    fi
 fi
