@@ -29,6 +29,14 @@ fi
 # 虚拟环境目录
 VENV_DIR="venv"
 
+# 检查是否已在虚拟环境中
+if [ -n "$VIRTUAL_ENV" ]; then
+    echo ""
+    echo "⚠️  检测到已激活的虚拟环境: $VIRTUAL_ENV"
+    echo "正在停用以使用项目虚拟环境..."
+    deactivate 2>/dev/null || true
+fi
+
 # 创建虚拟环境（如果不存在）
 if [ ! -d "$VENV_DIR" ]; then
     echo ""
@@ -39,9 +47,9 @@ fi
 
 # 激活虚拟环境
 echo ""
-echo "🔌 激活虚拟环境..."
+echo "🔌 激活项目虚拟环境..."
 source "$VENV_DIR/bin/activate"
-echo "✓ 虚拟环境已激活"
+echo "✓ 虚拟环境已激活: $VENV_DIR"
 
 # 升级 pip
 echo ""
