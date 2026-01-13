@@ -31,15 +31,40 @@ https://ambientcg.com/get?file=Gravel033_1K-JPG.zip
 pip install -r requirements.txt
 ```
 
-### macOS
+### macOS（推荐使用虚拟环境）
+
+**方式1：让打包脚本自动处理（推荐）⭐**
 ```bash
-pip install -r requirements-macos.txt
+# 打包脚本会自动创建虚拟环境并安装依赖
+./build-macos.sh
 ```
+
+**方式2：手动创建虚拟环境**
+```bash
+# 创建虚拟环境
+python3 -m venv venv
+
+# 激活虚拟环境
+source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements-macos.txt
+
+# 使用完后停用虚拟环境
+deactivate
+```
+
+> **为什么使用虚拟环境？**
+> - ✅ 依赖完全隔离，不污染系统 Python
+> - ✅ 可以精确控制每个依赖的版本
+> - ✅ 删除 `venv` 文件夹即可完全清理
+> - ✅ 不同项目的依赖互不冲突
+> - ✅ Python 社区的标准最佳实践
 
 > **注意**：
 > - Windows 和 macOS 使用不同的依赖文件，因为某些依赖是平台特定的
 > - macOS 版本支持 Python 3.8+ （包括最新的 3.14）
-> - 如果使用 Python 3.14+，会自动安装兼容版本的 PyInstaller (6.15+)
+> - 打包脚本会自动创建和管理虚拟环境
 
 ## 打包为单文件 EXE
 
@@ -57,7 +82,7 @@ pyinstaller --onefile --console file_downloader.py
 
 ### 方法一：标准打包（推荐 ⭐）
 
-**动态打包，自动检测依赖，长期稳定**
+**动态打包，自动检测依赖，使用虚拟环境，长期稳定**
 
 ```bash
 # GUI 模式（无终端窗口，默认）
@@ -66,31 +91,36 @@ pyinstaller --onefile --console file_downloader.py
 # 或显式指定模式
 ./build-macos.sh gui       # GUI 模式
 ./build-macos.sh console   # 控制台模式（调试用）
-./build-macos.sh clean     # 清理构建文件
+./build-macos.sh clean     # 清理构建文件和虚拟环境
 ```
 
 **特点**：
+- ✅ 自动创建和管理虚拟环境（依赖完全隔离）
 - ✅ 不依赖 spec 文件，不会过时
 - ✅ PyInstaller 自动检测所有依赖
 - ✅ 自动适配系统架构（Intel/Apple Silicon）
-- ✅ 简单稳定，推荐日常使用
+- ✅ Python 最佳实践，推荐日常使用
 
 ### 方法二：高级打包（可选）
 
-使用 spec 文件进行精细控制，适合需要高度定制的场景：
+动态生成优化配置，生成专业的 `.app` bundle：
 
 ```bash
-# 使用预配置的 spec 文件打包
+# 使用高级打包（自动生成并优化 spec 文件）
 ./build-macos-advanced.sh
+
+# 清理所有文件（包括虚拟环境）
+./build-macos-advanced.sh clean
 ```
 
 **额外优势**：
-- ✅ Universal Binary（同时支持 Intel 和 Apple Silicon）
+- ✅ 生成专业的 `.app` bundle（双击运行）
+- ✅ 自动创建和管理虚拟环境
+- ✅ 动态生成并优化 spec 文件（不会过时）
 - ✅ 排除不必要的模块，体积更小
-- ✅ 自定义 bundle 元数据
-- ✅ 可配置图标、版本号等
+- ✅ 自定义 bundle 元数据和图标
 
-**注意**：spec 文件需要手动维护，添加新依赖时需要更新配置。
+**特点**：spec 文件动态生成，无需手动维护！
 
 ### 方法三：手动打包
 

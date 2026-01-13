@@ -1,10 +1,10 @@
 #!/bin/bash
-# macOS 打包脚本 - 动态打包，不依赖 spec 文件
-# 使用 PyInstaller 自动检测依赖，确保长期稳定性
+# macOS 打包脚本 - 使用虚拟环境（最佳实践）
+# 动态打包，不依赖 spec 文件，依赖完全隔离
 
 set -e  # 遇到错误立即退出
 
-echo "=== FileDownloader macOS 打包脚本 ==="
+echo "=== FileDownloader macOS 打包脚本（虚拟环境）==="
 echo ""
 
 # 检查 Python
@@ -26,7 +26,7 @@ if [[ "$MODE" != "gui" && "$MODE" != "console" && "$MODE" != "clean" ]]; then
     echo "模式说明:"
     echo "  gui     - GUI 应用（默认，无终端窗口）"
     echo "  console - 控制台应用（有终端窗口，便于调试）"
-    echo "  clean   - 清理所有构建文件"
+    echo "  clean   - 清理所有构建文件（包括虚拟环境）"
     echo ""
     echo "示例:"
     echo "  $0        # 默认 GUI 模式"
@@ -39,50 +39,47 @@ fi
 # 清理模式
 if [ "$MODE" == "clean" ]; then
     echo ""
-    echo "🧹 清理构建文件..."
-    rm -rf build dist *.spec __pycache__ .eggs *.egg-info
+    echo "🧹 清理构建文件和虚拟环境..."
+    rm -rf build dist *.spec __pycache__ .eggs *.egg-info venv
     echo "✅ 清理完成"
     exit 0
 fi
 
-# 查找 pyinstaller
-PYINSTALLER_CMD=""
-if command -v pyinstaller &> /dev/null; then
-    PYINSTALLER_CMD="pyinstaller"
-else
-    # 在用户 Python 目录中查找
-    for version in 3.14 3.13 3.12 3.11 3.10; do
-        if [ -x "$HOME/Library/Python/$version/bin/pyinstaller" ]; then
-            PYINSTALLER_CMD="$HOME/Library/Python/$version/bin/pyinstaller"
-            break
-        fi
-    done
+# 虚拟环境目录
+VENV_DIR="venv"
+
+# 创建虚拟环境（如果不存在）
+if [ ! -d "$VENV_DIR" ]; then
+    echo ""
+    echo "📦 创建虚拟环境..."
+    python3 -m venv "$VENV_DIR"
+    echo "✓ 虚拟环境创建完成"
 fi
 
-if [ -z "$PYINSTALLER_CMD" ]; then
-    echo "❌ 找不到 pyinstaller"
-    echo ""
-    echo "请安装 pyinstaller:"
-    echo "  pip3 install --user pyinstaller"
-    echo ""
-    echo "或安装所有依赖:"
-    echo "  pip3 install --user -r requirements-macos.txt"
-    exit 1
-fi
-
-PYINSTALLER_VERSION=$($PYINSTALLER_CMD --version 2>/dev/null || echo "unknown")
-echo "✓ PyInstaller: $PYINSTALLER_VERSION"
+# 激活虚拟环境
 echo ""
+echo "🔌 激活虚拟环境..."
+source "$VENV_DIR/bin/activate"
+echo "✓ 虚拟环境已激活"
 
-# 检查依赖
-echo "📥 检查依赖..."
-if ! pip3 show requests &> /dev/null || ! pip3 show pyinstaller &> /dev/null; then
-    echo "正在安装缺失的依赖..."
-    pip3 install --user -r requirements-macos.txt
-    echo "✓ 依赖安装完成"
+# 升级 pip
+echo ""
+echo "📥 升级 pip..."
+pip install --upgrade pip -q
+echo "✓ pip 已更新"
+
+# 安装依赖
+echo ""
+echo "📥 安装/检查依赖..."
+if [ -f "requirements-macos.txt" ]; then
+    pip install -r requirements-macos.txt -q
 else
-    echo "✓ 所有依赖已安装"
+    pip install requests pyinstaller -q
 fi
+echo "✓ 依赖已安装"
+
+PYINSTALLER_VERSION=$(pyinstaller --version 2>/dev/null || echo "unknown")
+echo "✓ PyInstaller: $PYINSTALLER_VERSION"
 echo ""
 
 # 清理旧的构建文件
@@ -97,7 +94,7 @@ echo ""
 if [ "$MODE" == "gui" ]; then
     # GUI 模式 - 让 PyInstaller 自动处理所有事情
     echo "使用 GUI 模式打包..."
-    $PYINSTALLER_CMD \
+    pyinstaller \
         --name "FileDownloader" \
         --onedir \
         --noconfirm \
@@ -167,13 +164,14 @@ if [ "$MODE" == "gui" ]; then
     else
         echo ""
         echo "❌ 打包失败，未找到输出文件"
+        deactivate
         exit 1
     fi
     
 else
     # Console 模式 - 用于调试
     echo "使用控制台模式打包..."
-    $PYINSTALLER_CMD \
+    pyinstaller \
         --name "FileDownloader" \
         --onedir \
         --console \
@@ -202,6 +200,19 @@ else
     else
         echo ""
         echo "❌ 打包失败"
+        deactivate
         exit 1
     fi
 fi
+
+# 停用虚拟环境
+deactivate
+echo ""
+echo "✓ 虚拟环境已停用"
+echo ""
+echo "💡 使用虚拟环境的好处:"
+echo "  ✓ 依赖完全隔离，不污染系统 Python"
+echo "  ✓ 可以精确控制每个依赖的版本"
+echo "  ✓ 删除 venv 文件夹即可完全清理所有依赖"
+echo "  ✓ 不同项目的依赖互不冲突"
+echo ""

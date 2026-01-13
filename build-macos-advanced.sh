@@ -1,10 +1,10 @@
 #!/bin/bash
-# macOS 高级打包脚本 - 动态生成优化配置
-# 提供更精细的控制和优化，但不依赖预制 spec 文件
+# macOS 高级打包脚本 - 使用虚拟环境（最佳实践）
+# 动态生成优化配置，依赖完全隔离
 
 set -e
 
-echo "=== FileDownloader macOS 高级打包脚本 ==="
+echo "=== FileDownloader macOS 高级打包脚本（虚拟环境）==="
 echo ""
 
 # 检查 Python
@@ -15,35 +15,53 @@ fi
 
 echo "✓ Python: $(python3 --version)"
 
-# 查找 pyinstaller
-PYINSTALLER_CMD=""
-if command -v pyinstaller &> /dev/null; then
-    PYINSTALLER_CMD="pyinstaller"
-else
-    for version in 3.14 3.13 3.12 3.11 3.10; do
-        if [ -x "$HOME/Library/Python/$version/bin/pyinstaller" ]; then
-            PYINSTALLER_CMD="$HOME/Library/Python/$version/bin/pyinstaller"
-            break
-        fi
-    done
+# 参数处理
+MODE=${1:-build}
+
+if [[ "$MODE" == "clean" ]]; then
+    echo ""
+    echo "🧹 清理所有文件（包括虚拟环境）..."
+    rm -rf build dist *.spec __pycache__ .eggs *.egg-info venv
+    echo "✅ 清理完成"
+    exit 0
 fi
 
-if [ -z "$PYINSTALLER_CMD" ]; then
-    echo "❌ 找不到 pyinstaller"
-    echo "请安装: pip3 install --user pyinstaller"
-    exit 1
+# 虚拟环境目录
+VENV_DIR="venv"
+
+# 创建虚拟环境（如果不存在）
+if [ ! -d "$VENV_DIR" ]; then
+    echo ""
+    echo "📦 创建虚拟环境..."
+    python3 -m venv "$VENV_DIR"
+    echo "✓ 虚拟环境创建完成"
 fi
 
-echo "✓ PyInstaller: $($PYINSTALLER_CMD --version 2>/dev/null || echo 'unknown')"
+# 激活虚拟环境
 echo ""
+echo "🔌 激活虚拟环境..."
+source "$VENV_DIR/bin/activate"
+echo "✓ 虚拟环境已激活"
 
-# 检查依赖
-echo "📥 检查依赖..."
-if ! pip3 show requests pyinstaller &> /dev/null; then
-    echo "正在安装依赖..."
-    pip3 install --user -r requirements-macos.txt
+# 升级 pip
+echo ""
+echo "📥 升级 pip..."
+pip install --upgrade pip -q
+echo "✓ pip 已更新"
+
+# 安装依赖
+echo ""
+echo "📥 安装/检查依赖..."
+if [ -f "requirements-macos.txt" ]; then
+    pip install -r requirements-macos.txt -q
+else
+    pip install requests pyinstaller -q
 fi
 echo "✓ 依赖已安装"
+
+# 显示 PyInstaller 版本
+PYINSTALLER_VERSION=$(pyinstaller --version 2>/dev/null || echo "unknown")
+echo "✓ PyInstaller: $PYINSTALLER_VERSION"
 echo ""
 
 # 清理
@@ -137,7 +155,7 @@ echo ""
 
 # 第三步：使用优化后的 spec 重新打包
 echo "📦 步骤 3/3: 执行打包..."
-$PYINSTALLER_CMD --noconfirm FileDownloader.spec
+pyinstaller --noconfirm FileDownloader.spec
 
 # 检查结果
 echo ""
@@ -202,5 +220,11 @@ elif [ -d "dist/FileDownloader" ]; then
     echo ""
 else
     echo "❌ 打包失败"
+    deactivate
     exit 1
 fi
+
+# 停用虚拟环境
+deactivate
+echo ""
+echo "✓ 虚拟环境已停用"
