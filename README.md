@@ -55,50 +55,53 @@ pyinstaller --onefile --console file_downloader.py
 
 ## 打包为 macOS 独立运行应用（.app）
 
-### 方法一：标准打包（推荐）
+### 方法一：标准打包（推荐 ⭐）
 
-最简单的方式，适合大多数用户：
+**动态打包，自动检测依赖，长期稳定**
 
 ```bash
-# GUI 模式（无终端窗口）
-./build-macos.sh gui
+# GUI 模式（无终端窗口，默认）
+./build-macos.sh
 
-# 控制台模式（有终端窗口，便于调试）
-./build-macos.sh console
-
-# 清理构建文件
-./build-macos.sh clean
+# 或显式指定模式
+./build-macos.sh gui       # GUI 模式
+./build-macos.sh console   # 控制台模式（调试用）
+./build-macos.sh clean     # 清理构建文件
 ```
 
-### 方法二：高级打包（最佳实践）
+**特点**：
+- ✅ 不依赖 spec 文件，不会过时
+- ✅ PyInstaller 自动检测所有依赖
+- ✅ 自动适配系统架构（Intel/Apple Silicon）
+- ✅ 简单稳定，推荐日常使用
 
-使用 spec 文件进行精细控制，获得更好的优化：
+### 方法二：高级打包（可选）
+
+使用 spec 文件进行精细控制，适合需要高度定制的场景：
 
 ```bash
-# 使用优化的 spec 文件打包
+# 使用预配置的 spec 文件打包
 ./build-macos-advanced.sh
 ```
 
-**高级打包的优势**：
+**额外优势**：
 - ✅ Universal Binary（同时支持 Intel 和 Apple Silicon）
 - ✅ 排除不必要的模块，体积更小
-- ✅ 更好的元数据和系统集成
-- ✅ 支持暗黑模式
-- ✅ 可自定义图标和版本信息
+- ✅ 自定义 bundle 元数据
+- ✅ 可配置图标、版本号等
+
+**注意**：spec 文件需要手动维护，添加新依赖时需要更新配置。
 
 ### 方法三：手动打包
 
-如果需要完全自定义：
+如果你熟悉 PyInstaller，可以直接使用命令行：
 
 ```bash
 # 1. 安装依赖
 pip3 install -r requirements-macos.txt
 
-# 2a. 使用命令行参数（快速）
-pyinstaller --name "FileDownloader" --noconfirm file_downloader.py
-
-# 2b. 使用 spec 文件（推荐）
-pyinstaller --noconfirm FileDownloader-macos.spec
+# 2. 打包（自动生成 .app）
+pyinstaller --name "FileDownloader" --onedir --noconfirm file_downloader.py
 ```
 
 ### 打包输出
@@ -120,17 +123,26 @@ open dist/FileDownloader.app
 cp -r dist/FileDownloader.app /Applications/
 ```
 
-### macOS 最佳实践说明
+### 两种打包方式对比
 
-✅ **推荐**：
-- 不使用 `--onefile`（.app bundle 本身就是独立包）
-- 不使用 `--windowed`（用默认的 GUI 模式）
-- 使用 `--noconfirm` 自动覆盖
-- 使用 spec 文件进行精细控制
-- 不使用 UPX 压缩（macOS 不推荐）
-- 支持 Universal Binary
+| 特性 | 标准打包 | 高级打包 |
+|-----|---------|---------|
+| **稳定性** | ⭐⭐⭐⭐⭐ 不会过时 | ⭐⭐⭐ 需要维护 spec |
+| **易用性** | ⭐⭐⭐⭐⭐ 一键打包 | ⭐⭐⭐ 需要了解配置 |
+| **体积** | 正常 (~35MB) | 略小 (~30MB) |
+| **架构** | 自动检测 | Universal Binary |
+| **依赖检测** | 自动 | 手动配置 |
+| **推荐场景** | 日常使用 | 生产发布 |
 
-❌ **避免**：
-- `--onefile` + GUI 模式（会导致启动慢、体积大）
-- `--upx`（可能导致 macOS Gatekeeper 问题）
-- `--strip`（会移除必要的调试信息）
+### macOS 打包最佳实践
+
+✅ **推荐做法**：
+- 使用 `--onedir` 而非 `--onefile`（启动更快，兼容性更好）
+- 使用 `--noupx`（避免 macOS Gatekeeper 问题）
+- 让 PyInstaller 自动检测依赖（比手动维护更可靠）
+- 不使用 `--strip`（保留调试信息）
+
+❌ **避免做法**：
+- `--onefile` 在 macOS 上会导致启动慢、临时文件问题
+- `--upx` 可能触发安全警告
+- 过度优化（如 `optimize=2`）可能导致运行时错误
