@@ -79,14 +79,20 @@ echo ""
 
 # 第一步：生成基础 spec 文件
 echo "🔨 步骤 1/3: 生成配置文件..."
-$PYINSTALLER_CMD \
+pyinstaller \
     --name "FileDownloader" \
     --onedir \
     --noconfirm \
     file_downloader.py \
     > /dev/null 2>&1
 
-echo "✓ 配置文件已生成"
+if [ $? -eq 0 ]; then
+    echo "✓ 配置文件已生成"
+else
+    echo "❌ 配置文件生成失败"
+    deactivate
+    exit 1
+fi
 echo ""
 
 # 第二步：修改 spec 文件进行优化
